@@ -62,7 +62,7 @@
 
 		<!-- File Panel Start -->
 		<b-modal v-model="isFileActive" :can-cancel="[]" :destroy-on-hide="false" animation="zoom-in" aria-modal
-				 custom-class="file-panel" full-screen has-modal-card @after-enter="afterFileEnter">
+			custom-class="file-panel" full-screen has-modal-card @after-enter="afterFileEnter">
 			<template #default="props">
 				<file-panel ref="filePanel" @close="props.close"></file-panel>
 			</template>
@@ -73,17 +73,17 @@
 
 <script>
 
-import SearchBar           from '@/components/SearchBar.vue';
-import SideBar             from '@/components/SideBar.vue';
-import TopBar              from '@/components/TopBar.vue';
-import CoreService         from '@/components/CoreService.vue';
-import AppSection          from '@/components/Apps/AppSection.vue';
-import FilePanel           from '@/components/filebrowser/FilePanel.vue'
+import SearchBar from '@/components/SearchBar.vue';
+import SideBar from '@/components/SideBar.vue';
+import TopBar from '@/components/TopBar.vue';
+import CoreService from '@/components/CoreService.vue';
+import AppSection from '@/components/Apps/AppSection.vue';
+import FilePanel from '@/components/filebrowser/FilePanel.vue'
 import UpdateCompleteModal from '@/components/settings/UpdateCompleteModal.vue';
-import {mixin}             from '@/mixins/mixin';
-import events              from '@/events/events';
-import {nanoid}            from 'nanoid';
-
+import { mixin } from '@/mixins/mixin';
+import events from '@/events/events';
+import { nanoid } from 'nanoid';
+import authService from '@/service/hotel/authService';
 
 const wallpaperConfig = "wallpaper"
 
@@ -114,6 +114,7 @@ export default {
 	provide() {
 		return {
 			homeShowFiles: this.showFiles,
+			openLoginForm: this.showLoginForm
 		};
 	},
 
@@ -308,6 +309,23 @@ export default {
 				scroll: "keep",
 				animation: "zoom-in",
 			})
+		},
+
+		async showLoginForm() {
+			const token = authService.isUserLoggedIn();
+			if (!token) {
+				this.$buefy.modal.open({
+					parent: this,
+					component: () => import("@/components/hotelLogin/Login-User.vue"),
+					hasModalCard: true,
+					trapFocus: true,
+					canCancel: [],
+					scroll: "keep",
+					animation: "zoom-in",
+				})
+			} else {
+				this.$router.push("/dashboard");
+			}
 		},
 
 	},

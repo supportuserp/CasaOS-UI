@@ -19,6 +19,8 @@ import VueDOMPurifyHTML from 'vue-dompurify-html'
 import '@/assets/scss/app.scss'
 import VAnimateCss from 'v-animate-css';
 
+import vuetify from "@/plugins/vuetify";
+
 const io = require("socket.io-client");
 
 const isDev = process.env.NODE_ENV === 'dev';
@@ -63,6 +65,7 @@ Vue.prototype.$EventBus = new Vue();
 Vue.prototype.$messageBus = messageBus;
 
 new Vue({
+    vuetify,
 	router,
 	i18n,
 	store,

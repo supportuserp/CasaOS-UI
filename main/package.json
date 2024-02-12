@@ -87,6 +87,7 @@
     "vue-socket.io-extended": "^4.2.0",
     "vue2-touch-events": "^3.2.2",
     "vuedraggable": "^2.24.3",
+    "vuetify": "2.7.1",
     "vuex": "^3.6.2",
     "xterm": "^4.19.0",
     "xterm-addon-attach": "^0.6.0",

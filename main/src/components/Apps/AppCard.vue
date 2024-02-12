@@ -159,7 +159,7 @@ export default {
 		tipEditorModal,
 	},
 	mixins: [business_ShowNewAppTag, business_OpenThirdApp, business_LinkApp, commonI18n],
-	inject: ["homeShowFiles", "openAppStore"],
+	inject: ["homeShowFiles", "openAppStore", "openLoginForm"],
 	data() {
 		return {
 			hover: false,
@@ -304,6 +304,9 @@ export default {
 					break;
 				case "Files":
 					this.homeShowFiles()
+					break;
+				case "Hotel Admin":
+					this.openLoginForm()
 					break;
 				default:
 					break;

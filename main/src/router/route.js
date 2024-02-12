@@ -38,6 +38,16 @@ export default [
 			showBackground: true
 		}
 	},
+	{
+		path: '/dashboard',
+		name: 'Dashboard',
+		hidden: true,
+		component: () => import('@/views/hotel/Dashboard.vue'),
+		meta: {
+			requireAuth: true,
+			showBackground: false
+		}
+	},
 	// {
 	// 	path: '/files',
 	// 	name: 'Files',

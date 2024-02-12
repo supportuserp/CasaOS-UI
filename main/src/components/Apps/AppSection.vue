@@ -111,6 +111,16 @@ const builtInApplications = [
 		status: "running",
 		app_type: "system"
 	},
+	{
+		id: "3",
+		name: "Hotel Admin",
+		title: {
+			en_us: "Hotel Admin",
+		},
+		icon: require(`@/assets/img/app/login-logo.png`),
+		status: "running",
+		app_type: "system"
+	},
 ]
 
 const orderConfig = "app_order"
