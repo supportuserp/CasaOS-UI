@@ -1,17 +1,6 @@
-/*
- * @Author: Jerryk jerry@icewhale.org
- * @Date: 2022-05-20 19:18:19
- * @LastEditors: Jerryk jerry@icewhale.org
- * @LastEditTime: 2023-03-14 20:28:24
- * @FilePath: \CasaOS-UI-0.4.2\src\mixins\ListViewMixin.js
- * @Description: 
- * 
- * Copyright (c) 2022 by IceWhale, All Rights Reserved. 
- */
-
-import pull               from 'lodash/pull'
-import Hitbox             from 'hitbox-js'
-import events             from '@/events/events';
+import pull from 'lodash/pull'
+import Hitbox from 'hitbox-js'
+import events from '@/events/events';
 import VueBreakpointMixin from "vue-breakpoint-mixin";
 
 export default {
@@ -45,6 +34,7 @@ export default {
 		this.hitboxCheck();
 		window.addEventListener('keydown', this.onKeydown)
 		window.addEventListener('keyup', this.onKeyup)
+		window.addEventListener('blur', this.blur)
 		this.$nextTick(() => {
 			this.onResize();
 		})
@@ -63,7 +53,6 @@ export default {
 				this.cols = Math.floor(cw / this.CARD_WIDTH)
 				this.colStyle.width = (100 / this.cols).toString() + "%"
 			}
-			const ww = document.body.clientWidth
 		},
 
 		/*************************************************
@@ -112,6 +101,11 @@ export default {
 					this.isCtrl = true;
 					break;
 			}
+		},
+		blur(evnet) {
+			// make sure release shift and ctrl
+			this.isShift = false;
+			this.isCtrl = false;
 		},
 
 		/**
@@ -183,37 +177,46 @@ export default {
 		 * @return {*}
 		 */
 		onCardClick(event, item, index) {
-
-			// If SHIFT key is down
 			if (this.isShift) {
-				if (this.selectList.indexOf(index) == -1) {
-					this.selectList.push(index)
+				this.handleShiftClick(index);
+			} else if (this.isCtrl) {
+				this.handleCtrlClick(index);
+			} else {
+				this.handleNormalClick(event, item);
+			}
+		},
+
+		handleShiftClick(index) {
+			if (this.selectList.indexOf(index) === -1) {
+				this.selectList.push(index);
+			}
+			if (this.selectList.length > 1) {
+				const min = Math.min(this.selectList[0], this.selectList[this.selectList.length - 1]);
+				const max = Math.max(this.selectList[0], this.selectList[this.selectList.length - 1]);
+				this.selectList = [];
+				for (let i = min; i <= max; i++) {
+					this.selectList.push(i);
 				}
-				if (this.selectList.length > 1) {
-					let le = this.selectList.length
-					var min = Math.min(this.selectList[0], this.selectList[le - 1])
-					var max = Math.max(this.selectList[0], this.selectList[le - 1])
-					this.selectList = []
-					for (let i = min; i <= max; i++) {
-						this.selectList.push(i)
-					}
-				}
-				this.process()
-			} else if (this.isCtrl) { // If CTRL key is down
-				if (this.selectList.indexOf(index) == -1) {
-					this.selectList.push(index)
+			}
+			this.process();
+		},
+
+		handleCtrlClick(index) {
+			if (this.selectList.indexOf(index) === -1) {
+				this.selectList.push(index);
+			} else {
+				this.selectList.splice(this.selectList.indexOf(index), 1);
+			}
+			this.process();
+		},
+
+		handleNormalClick(event, item) {
+			const bounced = event.target.classList.contains('mdi-dots') || event.target.classList.contains('check') || event.target.classList.contains('background');
+			if (!bounced) {
+				if (item.is_dir) {
+					this.$emit('gotoFolder', item.path);
 				} else {
-					this.selectList.splice(this.selectList.indexOf(index), 1)
-				}
-				this.process()
-			} else { // Normal Click
-				let bounced = event.target.getAttribute('class').includes('mdi-dots') || event.target.getAttribute('class').includes('check') || event.target.getAttribute('class').includes('background')
-				if (!bounced) {
-					if (item.is_dir) {
-						this.$emit('gotoFolder', item.path)
-					} else {
-						this.$emit('showDetailModal', item)
-					}
+					this.$emit('showDetailModal', item);
 				}
 			}
 		},
@@ -290,5 +293,6 @@ export default {
 		window.removeEventListener('keydown', this.onKeydown)
 		window.removeEventListener('keyup', this.onKeyup)
 		window.removeEventListener('resize', this.onResize);
+		window.removeEventListener('blur', this.blur);
 	},
 }

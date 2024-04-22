@@ -1,25 +1,16 @@
-/*
- * @LastEditors: Jerryk jerry@icewhale.org
- * @LastEditTime: 2023-03-15 10:42:50
- * @FilePath: /CasaOS-UI/src/mixins/mixin.js
- * @Description:
- *
- * Copyright (c) 2022 by IceWhale, All Rights Reserved.
- */
-
-import qs    from 'qs'
-import has   from 'lodash/has'
+import qs from 'qs'
+import has from 'lodash/has'
 import union from 'lodash/union'
-import copy  from 'clipboard-copy'
+import copy from 'clipboard-copy'
 import dayjs from 'dayjs'
 
 const typeMap = {
 	"image-x-generic": ['png', 'jpg', 'jpeg', 'bmp', 'gif', 'webp', 'svg', 'tiff'],
 	"video-x-generic": ['mkv', 'mp4', '3gp', 'avi', 'm2ts', 'webm', 'flv', 'vob', 'ts', 'mts', 'mov', 'wmv', 'rm', 'rmvb', 'asf', 'wmv', 'mpg', 'm4v', 'mpeg', 'f4v'],
 	"audio-x-generic": ['aac', 'aiff', 'alac', 'amr', 'ape', 'flac', 'm4a', 'mp3', 'ogg', 'opus', 'wma', 'wav'],
-	"text-x-generic": ['txt', 'log', 'pages', 'md', 'conf', 'list', 'ini'],
+	"text-x-generic": ['txt', 'log', 'pages', 'conf', 'config', 'list', 'ini', 'toml', 'cfg', 'rc', 'env', 'service', 'conf.d', 'htaccess', 'gitconfig', 'vim', 'curlrc', 'wgetrc', 'gitignore'],
 	"text-markdown": ['md'],
-	"text-css": ['php', 'css', 'less', 'scss', 'sass', 'aspx', 'lua', 'vue', 'js', 'go', 'asp', 'bat', 'c', 'cpp', 'cs', 'json', 'py', 'perl', 'sh', 'xml', 'yaml', 'vb', 'vbs', 'sql', 'swift', 'rust', 'rs', 'jsp', 'yml'],
+	"text-css": ['php', 'css', 'less', 'scss', 'sass', 'aspx', 'lua', 'vue', 'js', 'go', 'asp', 'bat', 'c', 'cpp', 'cs', 'json', 'py', 'perl', 'sh', 'xml', 'yaml', 'vb', 'vbs', 'sql', 'swift', 'rust', 'rs', 'jsp', 'yml', 'r', 'pl', 'rb', 'src', 'h', 'tex', 'rtf', 'jsonld', 'ttl', 'n3', 'rss', 'atom', 'srt', 'ass', 'tsv', 'vcard', 'asc', 'url', 'diff', 'plaintext'],
 	"text-html": ['html', 'htm', 'shtml', 'shtm'],
 	"application-vnd.ms-word": ['doc', 'docx', 'wps'],
 	"application-vnd.ms-excel": ['xls', 'xlsx', 'csv'],
@@ -43,8 +34,10 @@ const filePanelMap = {
 	'code-editor': union(typeMap['text-x-generic'], typeMap['text-css'], typeMap['text-html'], typeMap['text-x-cmake'], typeMap['text-dockerfile']),
 	"video-player": union(typeMap['video-x-generic'], typeMap['audio-x-generic']),
 	"image-viewer": typeMap['image-x-generic'],
+	"doc-viewer": union(typeMap['application-vnd.ms-word']),
+	"excel-viewer": union(typeMap['application-vnd.ms-excel']),
 	// "mark-down-editor":typeMap['text-markdown'],
-	// "pdf-viewer": typeMap['application-pdf'],
+	"pdf-viewer": typeMap['application-pdf'],
 }
 export const wallpaperType = ['png', 'jpg', 'jpeg', 'bmp', 'gif', 'svg']
 const wallpaperConfig = "wallpaper"
@@ -53,7 +46,8 @@ const wallpaperConfig = "wallpaper"
 export const mixin = {
 	data() {
 		return {
-			baseUrl: `${this.$protocol}//${this.$baseURL}/v1/`
+			baseUrl: `${this.$protocol}//${this.$baseURL}/v1/`,
+			downloadIframe: null,
 		}
 	},
 	mounted() {
@@ -80,7 +74,7 @@ export const mixin = {
 		 * @return {String} lang
 		 */
 		getLangFromBrowser() {
-			var lang = navigator.language || navigator.userLanguage;
+			let lang = navigator.language || navigator.userLanguage;
 			lang = lang.toLowerCase().replace("-", "_");
 			return lang
 		},
@@ -106,45 +100,40 @@ export const mixin = {
 		 */
 		//
 		getIconFile(item) {
-			let isDir = false
-			if (has(item, 'is_dir') || has(item, "isFolder")) {
-				isDir = item.is_dir
-			}
+			const isDir = (has(item, 'is_dir') || has(item, "isFolder")) ? item.is_dir : false;
+			let icon = "unknown";
 			if (isDir) {
-				let folder = "folder-default"
 				if (item.type == "application") {
-					folder = "folder-application"
+					icon = "folder-application"
 				} else if (item.type == "usb") {
-					folder = "folder-usb"
+					icon = "folder-usb"
 				} else if (["sata", "nvme", "spi", "sas"].includes(item.type)) {
-					folder = "folder-hdd"
+					icon = "folder-hdd"
 				} else if (item.type == "home") {
-					folder = "folder-root"
+					icon = "folder-root"
 				} else if (item.name == "Media") {
-					folder = "folder-video"
+					icon = "folder-video"
 				} else if (item.name == "Downloads") {
-					folder = "folder-download"
+					icon = "folder-download"
 				} else if (item.name == "Documents") {
-					folder = "folder-documents"
+					icon = "folder-documents"
 				} else if (item.name == "Gallery") {
-					folder = "folder-pictures"
+					icon = "folder-pictures"
 				} else if (item.name == "AppData") {
-					folder = "folder-application"
+					icon = "folder-application"
 				} else {
-					folder = "folder-default"
+					icon = "folder-default"
 				}
-				return require(`@/assets/img/filebrowser/${folder}.svg`)
 			} else {
 				const ext = this.getFileExt(item);
-				let type = "unknown"
 				Object.keys(typeMap).forEach((_type) => {
 					const extensions = typeMap[_type]
 					if (extensions.indexOf(ext.toLowerCase()) > -1) {
-						type = _type
+						icon = _type
 					}
 				})
-				return require(`@/assets/img/filebrowser/${type}.svg`)
 			}
+			return require(`@/assets/img/filebrowser/${icon}.svg`)
 		},
 		getPanelType(item) {
 			const ext = this.getFileExt(item);
@@ -171,7 +160,18 @@ export const mixin = {
 				type: 'is-white'
 			})
 			let url = this.getFileUrl(items)
-			window.open(url, '_blank');
+			if (!this.downloadIframe) {
+				this.downloadIframe = document.createElement('iframe');
+				this.downloadIframe.style.display = 'none';
+				document.body.appendChild(this.downloadIframe);
+			}
+			this.downloadIframe.src = url;
+			// window.open(url, '_blank');
+		},
+		// Download Button Action
+		download() {
+			this.$refs.dropDown?.toggle()
+			this.downloadFile(this.item)
 		},
 		playVideo(item, player) {
 			let url = player + this.getFileUrl(item)
@@ -228,11 +228,7 @@ export const mixin = {
 			}
 			return apiUrl + qs.stringify(parameters)
 		},
-		// Download Button Action
-		download() {
-			this.$refs.dropDown.toggle()
-			this.downloadFile(this.item)
-		},
+
 		// Copy Path
 		copyPath() {
 			this.$refs.dropDown.toggle()
@@ -307,74 +303,62 @@ export const mixin = {
 		 * @return {void}
 		 */
 		deleteItem(items) {
-			let path = ""
-			if (items.constructor === Object) {
-				path = [items.path]
-			} else if (items.constructor === Array) {
-				path = items.map(o => {
-					return o.path
-				})
-			}
-			let isArray = items.constructor === Array
-			this.$api.batch.delete(JSON.stringify(path)).then(async res => {
-				if (res.data.success === 200) {
-					// update shotcut data
-					let bakData = []
-					let shotcutData = this.$store.state['shortcutData']
-					for (let i = 0; i < shotcutData.length; i++) {
-						let item = shotcutData[i]
-						if (isArray) {
-							// filter delteted item
-							bakData = shotcutData.filter(o => {
-								// has same path
-								if (path.indexOf(o.path) > -1) {
-									try {
-										this.$api.samba.deleteShare(item.extensions.share.id)
-									} catch (e) {
-										console.log(`${e} in delet shortcut`)
-									}
-									return false
-								} else {
-									return true
-								}
-							})
-						} else if (item.path === path[0]) {
-							shotcutData.splice(i, 1)
-							try {
-								this.$api.samba.deleteShare(item.extensions.share.id)
-							} catch (e) {
-								console.log(`${e} in delet shortcut`)
-							}
-						}
-					}
-					if (isArray) {
-						shotcutData = bakData
-					}
-					try {
-						await this.$store.dispatch('SET_SHORTCUT_DATA', shotcutData);
-
-					} catch (e) {
-						console.log(`${e} in deleteItem`)
-					}
-
-					if (this.$refs.dropDown !== undefined) {
-						this.$refs.dropDown.toggle()
-						this.$emit("reload")
-					}
-					try {
-						if (typeof this.reload === "function") {
-							this.reload()
-						}
-					} catch (e) {
-						console.log("Delete Error");
-					}
-				} else {
-					this.$buefy.toast.open({
-						message: res.data.message,
-						type: 'is-danger'
-					})
+			const deleteShare = async (shareId) => {
+				try {
+					await this.$api.samba.deleteShare(shareId);
+				} catch (e) {
+					console.log(`${e} in delete shortcut`);
 				}
-			})
+			};
+
+			const deleteShortcut = async (item) => {
+				try {
+					await deleteShare(item.extensions.share.id);
+					this.$store.commit('REMOVE_SHORTCUT', item.path);
+				} catch (e) {
+					console.log(`${e} in delete shortcut`);
+				}
+			};
+
+			const deleteItems = async (paths) => {
+				try {
+					const res = await this.$api.batch.delete(JSON.stringify(paths));
+					if (res.data.success === 200) {
+						const shotcutData = this.$store.state['shortcutData'];
+						const updatedShotcutData = shotcutData.filter((item) => {
+							if (paths.includes(item.path)) {
+								deleteShortcut(item);
+								return false;
+							}
+							return true;
+						});
+						await this.$store.dispatch('SET_SHORTCUT_DATA', updatedShotcutData);
+						if (this.$refs.dropDown !== undefined) {
+							this.$refs.dropDown.toggle();
+							this.$emit("reload");
+						}
+						if (typeof this.reload === "function") {
+							this.reload();
+						}
+					} else {
+						this.$buefy.toast.open({
+							message: res.data.message,
+							type: 'is-danger'
+						});
+					}
+				} catch (e) {
+					console.log(`${e} in deleteItem`);
+				}
+			};
+
+			let paths = [];
+			if (items.constructor === Object) {
+				paths = [items.path];
+			} else if (items.constructor === Array) {
+				paths = items.map((o) => o.path);
+			}
+
+			deleteItems(paths);
 		},
 		/**
 		 * @description: Set an image as wallpaper
@@ -435,11 +419,11 @@ export const mixin = {
 			if (null == value || value == '' || value == 0) {
 				return "0 bps";
 			}
-			var unitArr = ["bps", "Kbps", "Mbps", "Gbps", "TB", "PB", "EB", "ZB", "YB"];
-			var index = 0,
+			const unitArr = ["bps", "Kbps", "Mbps", "Gbps", "TB", "PB", "EB", "ZB", "YB"];
+			let index = 0,
 				srcsize = parseFloat(value);
 			index = Math.floor(Math.log(srcsize) / Math.log(1024));
-			var size = srcsize / Math.pow(1024, index);
+			let size = srcsize / Math.pow(1024, index);
 			size = size.toFixed(2);
 			return size + unitArr[index];
 		},

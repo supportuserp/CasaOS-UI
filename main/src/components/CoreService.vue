@@ -1,14 +1,3 @@
-<!--
-   *
- * @LastEditors: Jerryk jerry@icewhale.org
- * @LastEditTime: 2023-01-16 18:31:24
- * @FilePath: /CasaOS-UI/src/components/CoreService.vue
-   * @Description:
-   *
-   * Copyright (c) 2022 by IceWhale, All Rights Reserved.
-   *
-  -->
-
 <template>
 	<swiper ref="mySwiper" :options="swiperOptions">
 		<swiper-slide v-for="(noticeCard, key) in noticesData" :key="key" :class="{ _singleWidth: showFullCard }">
@@ -23,29 +12,28 @@
 		<div v-show="recommendShow || noticeLength !== 0" slot="pagination" class="swiper-pagination">
 		</div>
 		<img slot="button-prev" :src="require('@/assets/img/widgets/swiper-left.svg')" alt="prev"
-			 class="swiper-button-prev"/>
+			class="swiper-button-prev" />
 		<img slot="button-next" :src="require('@/assets/img/widgets/swiper-right.svg')" alt="next"
-			 class="swiper-button-next"/>
+			class="swiper-button-next" />
 	</swiper>
 </template>
 
 <script>
-import noticeBlock            from "@/components/noticBlock/noticeBlock";
-import {Swiper, SwiperSlide}  from 'vue-awesome-swiper'
-import {mixin}                from '@/mixins/mixin';
-import sortBy                 from 'lodash/sortBy';
-import SyncBlock              from "@/components/syncthing/SyncBlock.vue";
-import SmartBlock             from "@/components/smartHome/SmartBlock.vue";
-import events                 from "@/events/events";
+import noticeBlock from "@/components/noticBlock/noticeBlock";
+import { Swiper, SwiperSlide } from 'vue-awesome-swiper'
+import { mixin } from '@/mixins/mixin';
+import sortBy from 'lodash/sortBy';
+import SyncBlock from "@/components/syncthing/SyncBlock.vue";
+import SmartBlock from "@/components/smartHome/SmartBlock.vue";
+import events from "@/events/events";
 import Business_ShowNewAppTag from "@/mixins/app/Business_ShowNewAppTag";
-import DiskLearnMore          from "@/components/Storage/DiskLearnMore.vue";
-import last                   from "lodash/last";
-import {ice_i18n}             from "@/mixins/base/common-i18n";
-// import DockerProgress from "@/components/Apps/progress.js";
-// import StorageManagerPanel from "@/components/Storage/StorageManagerPanel.vue";
+import DiskLearnMore from "@/components/Storage/DiskLearnMore.vue";
+import last from "lodash/last";
+import { ice_i18n } from "@/mixins/base/common-i18n";
+
 
 export default {
-	components: {SmartBlock, SyncBlock, noticeBlock, Swiper, SwiperSlide},
+	components: { SmartBlock, SyncBlock, noticeBlock, Swiper, SwiperSlide },
 	name: "core-service",
 	mixins: [mixin, Business_ShowNewAppTag],
 	computed: {
@@ -409,80 +397,67 @@ export default {
 		},
 
 		transformAppInstallationProgress(res) {
-			// 4. delete the old one
-			// 5. Accidents skip ::When the end occurs more than once, it will be skipped.
 			if (res.finished) {
 				if (this.noticesData[res.name]) {
 					this.removeNotice(res.name);
 				}
 				this.$EventBus.$emit(events.RELOAD_APP_LIST);
 				if (res.isNewTag) {
-					// business :: Tagging of new app / scrollIntoView
-					this.addIdToSessionStorage(res.name)
+					this.addIdToSessionStorage(res.name);
 				}
 				return;
 			}
 
-			// 2. update noticesData
 			if (this.noticesData[res.name]) {
 				if (res.message !== "") {
-					console.log(res.message)
-					const messageArray = res.message?.split(/[(\r\n)\r\n]+/) || [];
-					messageArray.forEach((item, index) => {
-						if (!item) {
-							messageArray.splice(index, 1);
-						}
-					})
-					let totalPercentage = undefined;
-					const lastMessage = last(messageArray)
-					if (!lastMessage) {
-						return;
-					}
-					if (/Err/.test(lastMessage)) {
-						console.error(lastMessage)
-						return;
-					}
 					try {
-						const info = JSON.parse(lastMessage)
-						const id = (info.id != undefined) ? info.id : "";
-						let progress = ""
-						if (info.progressDetail != undefined) {
-							let progressDetail = info.progressDetail
-							if (!isNaN(progressDetail.current / progressDetail.total)) {
-								progress = `[ ${String(Math.floor((progressDetail.current / progressDetail.total) * 100))}% ]`
-							}
+						let progress = Number(res.message);
+						let currentInstallAppText = '';
+						if (progress?.toString() === '0') {
+							currentInstallAppText = 'Starting installation';
+						} else if (progress?.toString() === '100') {
+							currentInstallAppText = 'Installation completed';
+						} else {
+							currentInstallAppText = 'Installing ' + progress + '%';
 						}
-						let status = info.status
-						let currentInstallAppText = status + ":" + id + " " + progress
 						this.$set(this.noticesData[res.name], 'content', {
 							text: currentInstallAppText,
-							value: totalPercentage
-						})
+							value: progress
+						});
 					} catch (e) {
-						console.log(e)
+						console.log(e);
 					}
 				}
-				return
+				return;
 			}
 
-			// 1. add notice::add new app_install notice
 			const data = {
-				title: this.$t('Installing {title}', {title: res.title}),
+				title: this.$t('Installing {title}', { title: res.title }),
 				icon: res.icon,
 				content: {
 					text: res?.message,
 					value: 0
 				},
-				// show progress
 				contentType: 'progress',
-				// show Cancel button
-				operate: false,
-			}
-			this.addNotice(data, res.name)
+				operate: false
+			};
+			this.addNotice(data, res.name);
 		},
 
 	},
 	sockets: {
+		"app:apply-changes-begin"(res) { 
+			const title = ice_i18n(JSON.parse(res.Properties["app:title"]));
+			this.transformAppInstallationProgress({
+				finished: false,
+				name: res.Properties["app:name"],
+				title,
+				id: res.Properties["app:name"],
+				success: true,
+				message: "Starting pulling image info",
+				icon: res.Properties["app:icon"]
+			});
+		},
 		"app:apply-changes-end"(res) {
 			this.$buefy.toast.open({
 				message: "The setting of " + res.Properties["app:name"] + " is complete",
@@ -514,6 +489,19 @@ export default {
 				icon: res.Properties["app:icon"]
 			});
 		},
+		"app:install-begin"(res) {
+			const title = ice_i18n(JSON.parse(res.Properties["app:title"]));
+			this.transformAppInstallationProgress({
+				finished: false,
+				name: res.Properties["app:name"],
+				title,
+				id: res.Properties["app:name"],
+				success: true,
+				type: "install-begin",
+				message: "Starting installation",
+				icon: res.Properties["app:icon"]
+			});
+		},
 		"app:install-end"(res) {
 			this.transformAppInstallationProgress({
 				finished: true,
@@ -537,6 +525,7 @@ export default {
 				isNewTag: true
 			});
 		},
+
 		"app:update-begin"(res) {
 			this.transformAppInstallationProgress({
 				finished: false,
@@ -554,17 +543,16 @@ export default {
 				isNewTag: res.Properties["docker:image:updated"] === "true"
 			});
 		},
-		"docker:image:pull-progress"(res) {
+		"app:install-progress"(res) {
 			const title = ice_i18n(JSON.parse(res.Properties["app:title"]));
 			this.transformAppInstallationProgress({
 				finished: false,
-				// First name. Second app:name.The name from CheckThenUpdate.The app:name from install.
 				name: res.Properties["app:name"],
 				title,
 				id: res.Properties["app:name"],
 				success: true,
 				type: "pull",
-				message: res.Properties["message"],
+				message: res.Properties["app:progress"],
 				icon: res.Properties["app:icon"]
 			});
 		},
@@ -585,11 +573,13 @@ export default {
 }
 
 .swiper-container {
-	&:hover > .swiper-button-next:not(.swiper-button-disabled), &:hover > .swiper-button-prev:not(.swiper-button-disabled) {
+
+	&:hover>.swiper-button-next:not(.swiper-button-disabled),
+	&:hover>.swiper-button-prev:not(.swiper-button-disabled) {
 		opacity: 1;
 	}
 
-	& > .swiper-button-disabled {
+	&>.swiper-button-disabled {
 		opacity: 0;
 	}
 }

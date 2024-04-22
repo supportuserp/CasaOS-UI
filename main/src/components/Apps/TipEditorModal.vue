@@ -3,7 +3,7 @@
 		<!-- Modal-Card Header Start -->
 		<header class="modal-card-head">
 			<div class="is-flex-grow-1">
-				<h3 class="title is-3">{{ $t('Tips') }}</h3>
+				<h3 class="title is-header">{{ $t('Tips') }}</h3>
 			</div>
 			<div>
 				<div class="is-flex is-align-items-center">
@@ -19,7 +19,7 @@
 				left-toolbar right-toolbar>
 			</VMdEditor>
 			<div v-if="name" class="is-flex is-flex-direction-row-reverse mt-2">
-				<b-icon
+				<b-icon class="is-clickable"
 					:class="{ 'has-text-grey-800': !isEditing, 'has-text-green-default': isDifferentiation, 'has-text-grey-400': !isDifferentiation && isEditing }"
 					:icon="icon" pack="casa" @click.native="toggle"></b-icon>
 			</div>
@@ -64,7 +64,7 @@ export default {
 			tips: '',
 			tempTips: '',
 			controlEditorState: 'preview',
-			icon: 'edit'
+			icon: 'edit-outline'
 		}
 	},
 	props: {
@@ -83,38 +83,21 @@ export default {
 		},
 	},
 	watch: {
-		isEditing(val, a) {
-			console.log('isEditing', val, a)
+		isEditing(val) {
 			if (val) {
 				// editor is editable
 				this.controlEditorState = 'edit'
-				this.icon = 'matching'
+				this.icon = 'check-outline'
 			} else {
 				// editor is not editable
 				this.controlEditorState = 'preview'
-				this.icon = 'edit'
+				this.icon = 'edit-outline'
 			}
 			return this.isEditing
 		},
 		composeData: {
-			handler(val) {
+			handler() {
 				//Get tips in compose.
-				console.log('watch tips', val)
-
-				/*let getValueByPath = this.composeData['services'][this.name]
-				if (getValueByPath && getValueByPath['tips'] && getValueByPath['tips']['before_install']) {
-					let multiLine = getValueByPath['tips']['before_install'].forEach(item => {
-						let value = item.content['default'] && item.content['en_US']
-						return `${item.value}:${value}\n`
-					})
-					console.log('multiLine', multiLine)
-					// return multiLine
-					this.tips = multiLine;
-				} else {
-					this.tips = '';
-					// return ''
-				}*/
-
 				let getValueByPath = this.composeData['x-casaos']
 				if (getValueByPath?.['tips']?.['custom'] || getValueByPath?.['tips']?.['before_install']) {
 					this.tips = getValueByPath['tips']['custom'] || ice_i18n(getValueByPath['tips']['before_install'])

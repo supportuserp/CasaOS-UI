@@ -3,17 +3,17 @@
 		<div class="navbar-brand ml-4 _fixed-height">
 
 			<!-- SideBar Button Start -->
-			<div id="sidebar-btn" class="is-flex is-align-items-center mr-3 ml-3">
+			<div id="sidebar-btn" class="is-flex is-align-items-center navbar-item">
 				<b-tooltip :active="!$store.state.isMobile" :label="sidebarIconLabel" position="is-right" type="is-dark">
 					<div role="button" @click="showSideBar">
-						<b-icon :icon="sidebarIcon" class="picon" size="is-20"></b-icon>
+						<b-icon :icon="sidebarIcon" class="picon" pack="casa" size="is-20"></b-icon>
 					</div>
 				</b-tooltip>
 			</div>
 			<!-- SideBar Button Start -->
 
 			<!-- Account Dropmenu Start -->
-			<b-dropdown animation="fade1" aria-role="list" class="navbar-item" @active-change="getUserInfo">
+			<b-dropdown animation="fade1" aria-role="list" class="navbar-item" @active-change="getUserInfo"  :close-on-click="true">
 				<template #trigger>
 					<b-tooltip :active="!$store.state.isMobile" :label="$t('Account')" position="is-right" type="is-dark"
 						@click.native="$messageBus('account_setting')">
@@ -24,32 +24,7 @@
 				</template>
 
 				<b-dropdown-item :focusable="false" aria-role="menu-item" class="p-0" custom>
-					<h2 class="_title mb-4">{{ $t('Account') }}</h2>
-
-					<div class="is-flex is-align-items-center item mx-4">
-						<div class="is-flex is-align-items-center is-flex-grow-1">
-							<b-image :src="require('@/assets/img/account/default-avatar.svg')" class="is-40x40 mr-3"
-								rounded></b-image>
-							<b>{{ userInfo.username }}</b>
-						</div>
-						<div>
-							<a aria-role="button" @click="showAccountPanel">
-								<b-icon icon="user-edit-outline" pack="casa"></b-icon>
-							</a>
-						</div>
-					</div>
-
-					<div class="is-flex is-align-items-center item mt-2 mx-4 mb-4">
-						<div class="is-flex is-align-items-center  is-flex-grow-1">
-						</div>
-						<div>
-							<b-button class="ml-2 " rounded size="is-small" type="is-dark" @click="logout">{{
-								$t('Logout')
-							}}
-							</b-button>
-						</div>
-					</div>
-
+					<account-panel></account-panel>
 				</b-dropdown-item>
 			</b-dropdown>
 			<!-- Account Dropmenu End -->
@@ -323,6 +298,9 @@ const systemConfigName = "system"
 
 export default {
 	name: "top-bar",
+	components: {
+		AccountPanel
+	},
 	mixins: [mixin],
 	data() {
 		return {
@@ -356,7 +334,9 @@ export default {
 			// Language Sets
 			languages: [
 				{ lang: "ar_sa", name: "العربية" },
+				{ lang: "be_by", name: "Беларуская" },
 				{ lang: "de_de", name: "Deutsch" },
+				{ lang: "el_gr", name: "Ελληνικά"},
 				{ lang: "en_us", name: "English" },
 				{ lang: "es_es", name: "Español" },
 				{ lang: "fr_fr", name: "Français" },
@@ -370,6 +350,7 @@ export default {
 				{ lang: "pt_br", name: "Português (Brasileiro)" },
 				{ lang: "pt_pt", name: "Português" },
 				{ lang: "ro_ro", name: "Română" },
+				{ lang: "ru_ru", name: "Русский" },
 				{ lang: "sl_si", name: "Slovenščina" },
 				{ lang: "tr_tr", name: "Türkçe" },
 				{ lang: "uk_ua", name: "Українська" },
@@ -381,6 +362,7 @@ export default {
 				{ url: "https://www.google.com/search?q=", name: "Google" },
 				{ url: "https://www.bing.com/search?q=", name: "Bing" },
 				{ url: "https://www.startpage.com/do/search?cat=web&pl=chrome&query=", name: "StartPage" },
+				{ url: "https://search.brave.com/search?source=web&q=", name: "Brave" },
 			],
 			restart: 'Restart',
 			shutdown: 'Shutdown',
@@ -692,31 +674,6 @@ export default {
 				}
 			}
 		},
-
-		/**
-		 * @description: Show Account panel
-		 * @return {*} void
-		 */
-		showAccountPanel() {
-			this.$buefy.modal.open({
-				parent: this,
-				component: AccountPanel,
-				hasModalCard: true,
-				customClass: 'account-modal',
-				trapFocus: true,
-				canCancel: ['escape'],
-				scroll: "keep",
-				animation: "zoom-in",
-			})
-		},
-
-		logout() {
-			this.$messageBus('account_setting_logout')
-			this.$store.commit('SET_DEFAULT_WALLPAPER')
-			this.$router.push("/logout");
-		},
-
-
 		/*************************************************
 		 * PART 3  Terminal
 		 **************************************************/
@@ -826,7 +783,7 @@ export default {
 }
 
 ._title {
-	//styleName: Text 500Medium/Text02;
+	
 	font-family: $family-sans-serif;
 	font-size: 1rem;
 	font-weight: 500;
@@ -838,7 +795,7 @@ export default {
 }
 
 ._is-normal {
-	//styleName: Text 400Regular/Text03;
+	
 	font-family: $family-sans-serif;
 	font-size: 0.875rem;
 	font-weight: 400;
@@ -847,9 +804,6 @@ export default {
 	text-align: left;
 }
 
-._is-radius {
-	border-radius: 0.375rem;
-}
 
 ._has-text-attention {
 	color: hsla(18, 98%, 55%, 1);
@@ -1074,7 +1028,7 @@ export default {
 					vertical-align: middle;
 
 					color: hsla(208, 20%, 20%, 1);
-					//styleName: Text 500Medium/Text02;
+					
 					font-family: $family-sans-serif;
 					font-size: 1rem;
 					font-weight: 500;

@@ -1,15 +1,6 @@
-/*
- * @LastEditors: Jerryk jerry@icewhale.org
- * @LastEditTime: 2023-02-13 02:06:42
- * @FilePath: \CasaOS-UI-0.4.2\src\service\service.js
- * @Description:
- *
- * Copyright (c) 2023 by IceWhale, All Rights Reserved.
- */
-
-import axios  from 'axios'
+import axios from 'axios'
 import router from '@/router'
-import store  from '@/store'
+import store from '@/store'
 // import { ToastProgrammatic as Toast } from 'buefy'
 
 // const axiosBaseURL1 = (process.env.NODE_ENV === "dev") ? `${document.location.protocol}//${process.env.VUE_APP_DEV_IP}:${process.env.VUE_APP_DEV_PORT}` : ``
@@ -26,13 +17,13 @@ const instance = axios.create({
 });
 
 const getLangFromBrowser = () => {
-	var lang = navigator.language || navigator.userLanguage;
+	let lang = navigator.language || navigator.userLanguage;
 	lang = lang.toLowerCase().replace("-", "_");
 	return lang
 }
 
 const getInitLang = () => {
-	let lang = localStorage.getItem('lang') || getLangFromBrowser()
+	const lang = localStorage.getItem('lang') || getLangFromBrowser()
 	return lang
 }
 
@@ -61,6 +52,8 @@ let isRefreshing = false
 let requests = []
 
 function logout() {
+	store.commit("SET_ACCESS_TOKEN", "");
+	store.commit("SET_REFRESH_TOKEN", "");
 	router.replace({ //Jump to the logout page
 		path: '/logout'
 	})
@@ -158,11 +151,11 @@ const api = {
 	},
 	delete(url, data) {
 		url = testVisionNum(url)
-		return instance.delete(url, {data: data})
+		return instance.delete(url, { data: data })
 	},
 	patch(url, data) {
 		url = testVisionNum(url)
 		return instance.patch(url, data)
 	},
 }
-export {api, instance}
+export { api, instance }

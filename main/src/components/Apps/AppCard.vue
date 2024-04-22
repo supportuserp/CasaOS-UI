@@ -1,20 +1,23 @@
 <template>
-	<div class="common-card is-flex is-align-items-center is-justify-content-center p-55 app-card"
+	<div class="common-card is-flex is-align-items-center is-justify-content-center  app-card"
 		@mouseleave="hover = true" @mouseover="hover = true">
 
 		<!-- Action Button Start -->
 		<div v-if="item.app_type !== 'system' && !isContainerApp && !isUninstalling" class="action-btn">
 			<b-dropdown ref="dro" :mobile-modal="false" :triggers="['contextmenu', 'click']" animation="fade1"
-				append-to-body aria-role="list" class="app-card-drop" position="is-bottom-left"
+				append-to-body aria-role="list" class="app-card-drop" :position="dropdownPosition"
 				@active-change="setDropState">
 				<template #trigger>
-					<p role="button">
+					<p role="button" @click="handleDorpdownPosition">
 						<b-icon class="is-clickable" icon="dots-vertical-outline" pack="casa"></b-icon>
 					</p>
 				</template>
 
 				<b-dropdown-item :focusable="false" aria-role="menu-item" custom>
-					<b-button expanded tag="a" type="is-text" @click="openApp(item)">{{ $t('Open') }}</b-button>
+					<b-button v-if="item.status === 'running'" expanded tag="a" type="is-text" @click="openApp(item)">{{
+						$t('Open') }}</b-button>
+					<b-button v-else expanded tag="a" type="is-text" @click="openApp(item)">{{
+						$t('launch-and-open') }}</b-button>
 					<b-button v-if="isV2App" expanded icon-pack="casa" icon-right="question-outline" size="is-16"
 						type="is-text" @click="openTips(item.name)">
 						{{ $t('Tips') }}
@@ -23,13 +26,8 @@
 						$t('Setting')
 					}}
 					</b-button>
-					<b-button v-if="false" :loading="isCloning" expanded type="is-text"
-						@click="appClone(item.appstore_id)">{{
-							$t('Clone')
-						}}
-					</b-button>
 
-					<b-button v-if="isV2App" expanded type="is-text" @click="checkAppVersion(item.name)">{{
+					<b-button v-if="isV2App && !item.is_uncontrolled" expanded type="is-text" @click="checkAppVersion(item.name)">{{
 						$t('Check then update')
 					}}
 						<b-loading :active="isCheckThenUpdate || isUpdating" :is-full-page="false">
@@ -47,25 +45,6 @@
 					}}
 					</b-button>
 
-					<b-dropdown v-if="false" :triggers="['click']" aria-role="list" class="is-right" expanded>
-						<template #trigger>
-							<b-button :label="$t('Advanced')" expanded type="is-text" />
-						</template>
-						<b-dropdown-item :focusable="false" aria-role="menu-item" custom>
-							<b-button expanded type="is-text">{{ $t('Open') }}</b-button>
-							<b-button expanded type="is-text">{{ $t('Open') }}</b-button>
-							<b-dropdown id="box" aria-role="list" class="is-right" expanded>
-								<template #trigger>
-									<b-button :label="$t('Advanced')" expanded type="is-text" />
-								</template>
-								<b-dropdown-item id="item" :focusable="false" aria-role="menu-item" custom>
-									<b-button expanded type="is-text">{{ $t('Open') }}</b-button>
-									<b-button expanded type="is-text">{{ $t('Open') }}</b-button>
-								</b-dropdown-item>
-							</b-dropdown>
-						</b-dropdown-item>
-					</b-dropdown>
-
 					<b-button v-if="isLinkApp" class="mb-1" expanded type="is-text" @click="uninstallApp(true)">
 						{{ $t('Delete') }}
 						<b-loading v-model="isUninstalling" :is-full-page="false">
@@ -82,16 +61,16 @@
 					<div v-if="!isLinkApp" class="gap">
 						<div class="columns is-gapless _b-bor is-flex">
 							<div class="column is-flex is-justify-content-center is-align-items-center">
-								<b-button :loading="isRestarting" expanded type="is-text" @click="restartApp">
-									<b-icon custom-size="is-size-20px" icon="restart-outline" pack="casa"
-										size="is-20x20"></b-icon>
+								<b-button :loading="isRestarting" expanded type="is-text" @click="restartApp"
+									:disabled="item.status != 'running'">
+									<b-icon custom-size="is-size-20px" icon="restart-outline" pack="casa"></b-icon>
 								</b-button>
 							</div>
 							<div class="column is-flex is-justify-content-center is-align-items-center">
 								<b-button :class="item.status" :loading="isStarting" class="has-text-red" expanded
 									type="is-text" @click="toggle(item)">
 									<b-icon custom-size="is-size-20px" icon="shutdown-outline" pack="casa"
-										size="is-20"></b-icon>
+										:custom-class="shutDownClass"></b-icon>
 								</b-button>
 							</div>
 						</div>
@@ -175,6 +154,7 @@ export default {
 			// Public. Only changes the state of the card, not the state of the button.
 			isSaving: false,
 			isActiveTooltip: false,
+			dropdownPosition: "is-bottom-right",
 		}
 	},
 	props: {
@@ -186,48 +166,36 @@ export default {
 	computed: {
 		tooltipLabel() {
 			if (this.isContainerApp) {
-				return this.$t('Import to CasaOS')
+				return this.$t('Import to CasaOS');
+			} else if (this.item.app_type === "system") {
+				return this.$t('Open');
+			} else if (this.isUpdating) {
+				return this.$t('Updating');
+			} else if (this.isUninstalling) {
+				return this.$t('Uninstalling');
+			} else if (this.isCloning) {
+				return this.$t('Cloning');
+			} else if (this.isRestarting) {
+				return this.$t('Restarting');
+			} else if (this.isStarting) {
+				return this.$t('updateState');
+			} else if (this.isRebuilding) {
+				return this.$t('Rebuilding');
+			} else if (this.isCheckThenUpdate) {
+				return this.$t('CheckThenUpdate');
+			} else if (this.item.status === 'running') {
+				return this.$t('Open');
 			} else {
-				if (this.item.app_type === "system") {
-					return this.$t('Open')
-				} else {
-					if (this.isUpdating) {
-						return this.$t('Updating')
-					} else if (this.isUninstalling) {
-						return this.$t('Uninstalling')
-					} else if (this.isCloning) {
-						return this.$t('Cloning')
-					} else if (this.isRestarting) {
-						return this.$t('Restarting')
-					} else if (this.isStarting) {
-						return this.$t('updateState')
-					} else if (this.isRebuilding) {
-						return this.$t('Rebuilding')
-					} else if (this.isCheckThenUpdate) { // this.isCheckThenUpdate !!!
-						return this.$t('CheckThenUpdate')
-					} else if (this.item.status === 'running') {
-						return this.$t('Open')
-					} else {
-						return ''
-					}
-				}
+				return this.$t('launch-and-open');
 			}
 		},
 		tooltipTriger() {
-			if (this.isContainerApp) {
-				return ['hover']
-			} else {
-				if (this.item.app_type === "system") {
-					return ['hover']
-				} else {
-					switch (this.item.status) {
-						case 'running':
-							return ['hover']
-						default:
-							return []
-					}
-				}
-			}
+			return ['hover'];
+			// if (this.isContainerApp || this.item.app_type === "system" || this.item.status === 'running') {
+			// 	return ['hover'];
+			// } else {
+			// 	return [];
+			// }
 		},
 		isLoading() {
 			let active = this.isUninstalling || this.isUpdating || this.isRestarting || this.isStarting || this.isSaving || this.isRebuilding // || this.isStoping || this.isSaving
@@ -244,6 +212,9 @@ export default {
 		},
 		isLinkApp() {
 			return this.item.app_type === "LinkApp"
+		},
+		shutDownClass() {
+			return this.item.status !== 'running'? "shutdown-rounded": ""
 		},
 
 	},
@@ -271,6 +242,15 @@ export default {
 	},
 
 	methods: {
+		handleDorpdownPosition(event) {
+			this.$nextTick(() => {
+				const rightOffset = window.innerWidth - event.clientX - 160
+				const horizontalPos = rightOffset > 0 ? "right" : "left"
+				const bottomOffset = window.innerHeight - event.clientY - 212
+				const verticalPos = bottomOffset > 0 ? "bottom" : "top"
+				this.dropdownPosition = `is-${verticalPos}-${horizontalPos}`
+			})
+		},
 		/**
 		 * @description: Open app in new windows
 		 * @param {String} status App status
@@ -293,6 +273,9 @@ export default {
 				this.$refs.dro.isActive = false
 				if (item.status === 'running') {
 					this.openAppToNewWindow(item)
+				} else {
+					this.toggle(item)
+					this.firstOpenThirdApp(item)
 				}
 			}
 		},
@@ -628,7 +611,6 @@ export default {
 
 		checkAppVersion(name) {
 			this.isCheckThenUpdate = true;
-			const params = `${this.item.name}?name=${this.item.name}&pull=true&cid=${this.item.name}`
 			this.$openAPI.appManagement.compose.updateComposeApp(name).then(resp => {
 				// 200:
 				if (resp.status === 200) {
@@ -680,10 +662,6 @@ export default {
 	},
 
 	sockets: {
-		"app:start-begin"(res) {
-			if (res.Properties["app:name"] === this.item.name) {
-			}
-		},
 		"app:start-error"(res) {
 			// toast info.
 			this.$buefy.toast.open({
@@ -752,9 +730,7 @@ export default {
 		 * @return {void}
 		 */
 		'app:update-begin'() {
-			// if (data.Properties["app:name"] === this.item.id) {
-			// 	this.loadState = true;
-			// }
+			
 		},
 
 		'docker:image:pull-end'(data) {
@@ -813,7 +789,6 @@ export default {
 			}
 		},
 		"app:uninstall-error"(res) {
-			// TODO verify
 			if (res.Properties['id'] === this.item.name) {
 				this.isUninstalling = false;
 			}
@@ -826,6 +801,12 @@ export default {
 <style lang="scss">
 .pb-3px {
 	padding-bottom: 3px;
+}
+
+.shutdown-rounded {
+	border-radius: 50%;
+	background-color: #000;
+	color: #fff;
 }
 
 .app-card-drop {
@@ -965,17 +946,10 @@ export default {
 		box-shadow: none;
 		padding: 0.375rem 0.75rem;
 		border-radius: 0.5rem;
-
-		/* Text 400Regular/Text03 */
-
 		font-family: $family-sans-serif;
 		font-style: normal;
 		line-height: 1.25rem;
-		/* identical to box height, or 143% */
-
 		font-feature-settings: 'pnum' on, 'lnum' on;
-
-		/* Gary/800 */
 
 		color: hsla(208, 20%, 20%, 1);
 
@@ -998,12 +972,10 @@ export default {
 
 .dropdown.is-left .dropdown-menu {
 	top: 0;
-	//right: calc(100% + 6px);
 	left: calc(-100% - 14px);
 }
 </style>
 <style lang="scss">
-// TODO Style libraries
 .dialog {
 	.modal-card-head {
 		padding-left: 1.5rem;
@@ -1029,7 +1001,7 @@ export default {
 		padding-bottom: 1.5rem;
 		padding-right: 1.5rem;
 
-		//styleName: Text 400Regular/Text03;
+
 		font-size: 14px;
 		font-weight: 400;
 		line-height: 20px;

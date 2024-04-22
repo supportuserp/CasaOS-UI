@@ -1,44 +1,120 @@
-<!--
-  * @LastEditors: zhanghengxin ezreal.zhang@icewhale.org
-  * @LastEditTime: 2023/2/22 下午12:18
-  * @FilePath: /CasaOS-UI/src/components/Apps/ComposeConfig.vue
-  * @Description:
-  *
-  * Copyright (c) 2023 by IceWhale, All Rights Reserved.
-
-  -->
-
 <template>
 	<section style="height: calc(100vh - 12.8125rem)">
-		<b-tabs class="has-text-full-03" style="height:100%" @input="key => $emit('updateDockerComposeServiceName', key)">
+		<b-tabs
+			class="has-text-full-03"
+			style="height: 100%"
+			v-model="current_service"
+		>
 			<b-tab-item v-for="(service, key) in configData.services" :key="key" :label="key" :value="key">
 				<ValidationObserver :ref="key + 'valida'">
-					<ValidationProvider v-slot="{ errors, valid }" name="Image" rules="required">
-						<b-field :label="$t('Docker Image') + ' *'" :message="$t(errors)"
-							:type="{ 'is-danger': errors[0], 'is-success': valid }" class="mb-3">
-							<b-input v-model="service.image" :placeholder="$t('e.g.,hello-world:latest')"
-								:readonly="state == 'update'" @input="changeIcon"></b-input>
-						</b-field>
-					</ValidationProvider>
+					<b-field grouped>
+						<ValidationProvider
+							class="is-flex-grow-1"
+							v-slot="{ errors, valid }"
+							name="Image0"
+							rules="required"
+						>
+							<b-field
+								:label="$t('Docker Image') + ' *'"
+								:message="$t(errors)"
+								:type="{ 'is-danger': errors[0], 'is-success': valid }"
+								class="mb-3"
+							>
+								<b-input
+									:key="service.image"
+									:readonly="state == 'update' || serviceStableVersion !== ''"
+									:value="getFirstField(service.image)"
+									:placeholder="$t('e.g.,hello-world:latest')"
+									@input="(V) => changeIcon(V)"
+									@blur="
+										(E) => {
+											return (service.image = service.image.split(':')[1]
+												? E.target._value + ':' + service.image.split(':')[1]
+												: E.target._value);
+										}
+									"
+								>
+								</b-input>
+							</b-field>
+						</ValidationProvider>
+						<b-dropdown aria-role="menu" trap-focus>
+							<template #trigger>
+								<ValidationProvider v-slot="{ errors, valid }" name="Image1" rules="required">
+									<b-field
+										:label="$t('Tag')"
+										:message="$t(errors) || '123'"
+										:type="{ 'is-danger': errors[0], 'is-success': valid }"
+									>
+										<b-input
+											icon-pack="casa"
+											icon-right="down-outline"
+											class="is-flex-grow-1"
+											:value="getLateField(service.image)"
+											@input="
+												(V) => {
+													service.image = service.image.split(':')[0] + ':' + V;
+												}
+											"
+										>
+										</b-input>
+									</b-field>
+								</ValidationProvider>
+							</template>
+							<b-dropdown-item
+								key="latest"
+								@click="
+									() => {
+										service.image = service.image.split(':')[0] + ':latest';
+									}
+								"
+							>
+								latest
+							</b-dropdown-item>
+							<b-dropdown-item
+								key="stable"
+								v-show="serviceStableVersion !== '' && firstAppName === key"
+								@click="
+									() => {
+										service.image = service.image.split(':')[0] + ':' + serviceStableVersion;
+									}
+								"
+							>
+								stable({{ serviceStableVersion }})
+							</b-dropdown-item>
+						</b-dropdown>
+					</b-field>
 
 					<ValidationProvider v-slot="{ errors, valid }" name="composeAppName" rules="required">
-						<b-field :label="$t('App Name') + ' *'" :message="$t(errors)"
-							:type="{ 'is-danger': errors[0], 'is-success': valid }">
-							<b-input :placeholder="$t('e.g.,Your App Name')" :value="ice_i18n(configData['x-casaos'].title)"
-								@blur="E => configData['x-casaos'].title.custom = E.target._value"></b-input>
+						<b-field
+							:label="$t('App Name') + ' *'"
+							:message="$t(errors)"
+							:type="{ 'is-danger': errors[0], 'is-success': valid }"
+						>
+							<b-input
+								:placeholder="$t('e.g.,Your App Name')"
+								:value="ice_i18n(configData['x-casaos'].title)"
+								@blur="(E) => (configData['x-casaos'].title.custom = E.target._value)"
+							></b-input>
 						</b-field>
 					</ValidationProvider>
 
 					<b-field v-if="key === firstAppName" :label="$t('Icon URL')">
 						<p class="control">
 							<span class="button is-static container-icon">
-								<b-image :key="appIcon" :src="appIcon"
-									:src-fallback="require('@/assets/img/app/default.svg')" class="is-32x32"
-									ratio="1by1"></b-image>
+								<b-image
+									:key="appIcon"
+									:src="appIcon"
+									:src-fallback="require('@/assets/img/app/default.svg')"
+									class="is-32x32"
+									ratio="1by1"
+								></b-image>
 							</span>
 						</p>
-						<b-input v-model="configData['x-casaos'].icon" :placeholder="$t('Your custom icon URL')"
-							expanded></b-input>
+						<b-input
+							v-model="configData['x-casaos'].icon"
+							:placeholder="$t('Your custom icon URL')"
+							expanded
+						></b-input>
 					</b-field>
 
 					<b-field v-if="key === firstAppName" label="Web UI">
@@ -46,50 +122,92 @@
 							<option value="http">http://</option>
 							<option value="https">https://</option>
 						</b-select>
-						<b-input v-model="configData['x-casaos'].hostname" :placeholder="baseUrl" expanded></b-input>
-						<b-autocomplete v-model="configData['x-casaos'].port_map" :data="bridgePorts(configData.services)"
-							:open-on-focus="true" :placeholder="$t('Port')" class="has-colon" field="hostname"
-							@select="(option) => (portSelected = option)"></b-autocomplete>
-						<b-input v-model="configData['x-casaos'].index" :placeholder="'/index.html ' + $t('[Optional]')"
-							expanded></b-input>
+						<b-input v-model="configData['x-casaos'].hostname" :placeholder="baseUrl" expanded> </b-input>
+						<b-autocomplete
+							v-model="configData['x-casaos'].port_map"
+							:data="bridgePorts(configData.services)"
+							:open-on-focus="true"
+							:placeholder="$t('Port')"
+							class="has-colon"
+							field="hostname"
+							@select="(option) => (portSelected = option)"
+						>
+						</b-autocomplete>
+						<b-input
+							v-model="configData['x-casaos'].index"
+							:placeholder="'/index.html ' + $t('[Optional]')"
+							expanded
+						>
+						</b-input>
 					</b-field>
 
 					<b-field :label="$t('Network')">
-						<b-select :value="service.network_mode || service?.networks?.[0]" expanded placeholder="Select"
-							@input="v => patchNetworkValue(v, service)">
+						<b-select
+							:value="service.network_mode || service?.networks?.[0]"
+							expanded
+							placeholder="Select"
+							@input="(v) => patchNetworkValue(v, service)"
+						>
 							<optgroup v-for="net in appendNetworks" :key="net.driver" :label="net.driver">
-								<option v-for="(option, index) in net.networks" :key="option.name + index"
-									:value="option.name">
+								<option
+									v-for="(option, index) in net.networks"
+									:key="option.name + index"
+									:value="option.name"
+								>
 									{{ option.name }}
 								</option>
 							</optgroup>
 						</b-select>
 					</b-field>
 
-					<ports v-if="showPorts(service)" v-model="service.ports" :ports_in_use="ports_in_use"
-						:showHostPost="showHostPort(service)"></ports>
+					<ports
+						v-if="showPorts(service)"
+						v-model="service.ports"
+						:ports_in_use="ports_in_use"
+						:showHostPost="showHostPort(service)"
+					></ports>
 
-					<volumes-input-group v-model="service.volumes" :label="$t('Volumes')"
-						:message="$t('No volumes now, click “+” to add one.')" type="volume">
+					<volumes-input-group
+						v-model="service.volumes"
+						:label="$t('Volumes')"
+						:message="$t('No volumes now, click “+” to add one.')"
+						type="volume"
+					>
 					</volumes-input-group>
-					<env-input-group v-model="service.environment" :label="$t('Environment Variables')"
-						:message="$t('No environment variables now, click “+” to add one.')">
+					<env-input-group
+						v-model="service.environment"
+						:label="$t('Environment Variables')"
+						:message="$t('No environment variables now, click “+” to add one.')"
+					>
 					</env-input-group>
-					<input-group :devices="service.devices" :label="$t('Devices')"
-						:message="$t('No devices now, click “+” to add one.')" type="device">
+					<input-group
+						:devices="service.devices"
+						:label="$t('Devices')"
+						:message="$t('No devices now, click “+” to add one.')"
+						type="device"
+					>
 					</input-group>
-					<commands-input v-model="service.command" :label="$t('Container Command')"
-						:message="$t('No commands now, click “+” to add one.')">
+					<commands-input
+						v-model="service.command"
+						:label="$t('Container Command')"
+						:message="$t('No commands now, click “+” to add one.')"
+					>
 					</commands-input>
 
 					<b-field :label="$t('Privileged')">
 						<b-switch v-model="service.privileged"></b-switch>
 					</b-field>
 
-					<b-field :label="$t('Memory Limit')">
-						<vue-slider :max="totalMemory" :min="memory_min" class="mx-2"
+					<b-field :label="$t('Memory Limit')" class="mb-5">
+						<vue-slider
+							:max="totalMemory"
+							:min="memory_min"
+							class="mx-2"
+							:marks="true"
+							:data="markData"
 							:value="service.deploy.resources.limits.memory | duplexDisplay"
-							@change="(v) => service.deploy.resources.limits.memory = v"></vue-slider>
+							@change="(v) => (service.deploy.resources.limits.memory = v)"
+						></vue-slider>
 					</b-field>
 
 					<b-field :label="$t('CPU Shares')">
@@ -109,26 +227,44 @@
 					</b-field>
 
 					<b-field :label="$t('Container Capabilities (cap-add)')">
-						<b-taginput ref="taginput" v-model="service.cap_add" :allow-new="false" :data="capArray"
-							:open-on-focus="false" autocomplete @typing="getFilteredTags">
+						<b-taginput
+							ref="taginput"
+							v-model="service.cap_add"
+							:allow-new="false"
+							:data="capArray"
+							:open-on-focus="false"
+							autocomplete
+							@typing="getFilteredTags"
+						>
 							<template slot-scope="props">
 								{{ props.option }}
 							</template>
 							<template #empty> There are no items</template>
 							<template #portSelected="props">
-								<b-tag v-for="(tag, index) in props.tags" :key="index" :tabstop="false" closable
-									@close="$refs.taginput.removeTag(index, $event)">
+								<b-tag
+									v-for="(tag, index) in props.tags"
+									:key="index"
+									:tabstop="false"
+									closable
+									@close="$refs.taginput.removeTag(index, $event)"
+								>
 									{{ tag }}
 								</b-tag>
 							</template>
 						</b-taginput>
 					</b-field>
 
-					<ValidationProvider v-slot="{ errors, valid }" name="Name" rules="rfc1123">
-						<b-field :label="$t('Container Hostname')" :message="$t(errors)"
-							:type="{ 'is-danger': errors[0], 'is-success': valid && service.container_name }">
-							<b-input v-model="service.container_name" :placeholder="$t('Hostname of app container')"
-								value=""></b-input>
+					<ValidationProvider v-slot="{ errors, valid }" name="Name" rules="ContainerName">
+						<b-field
+							:label="$t('Container Name')"
+							:message="$t(errors)"
+							:type="{ 'is-danger': errors[0], 'is-success': valid && service.container_name }"
+						>
+							<b-input
+								v-model="service.container_name"
+								:placeholder="$t('Name of app container')"
+								value=""
+							></b-input>
 						</b-field>
 					</ValidationProvider>
 				</ValidationObserver>
@@ -138,29 +274,29 @@
 </template>
 
 <script>
-import debounce from "lodash/debounce";
-import axios from "axios";
+import debounce                                   from "lodash/debounce";
+import axios                                      from "axios";
 import { ValidationObserver, ValidationProvider } from "vee-validate";
 import "@/plugins/vee-validate";
-import Ports from "../forms/Ports.vue";
-import EnvInputGroup from "../forms/EnvInputGroup.vue";
-import CommandsInput from "../forms/CommandsInput.vue";
-import InputGroup from "../forms/InputGroup.vue";
-import VolumesInputGroup from "@/components/forms/VolumesInputGroup.vue";
-import VueSlider from "vue-slider-component";
+import Ports                                      from "../forms/Ports.vue";
+import EnvInputGroup                              from "../forms/EnvInputGroup.vue";
+import CommandsInput                              from "../forms/CommandsInput.vue";
+import InputGroup                                 from "../forms/InputGroup.vue";
+import VolumesInputGroup                          from "@/components/forms/VolumesInputGroup.vue";
+import VueSlider                                  from "vue-slider-component";
 import "vue-slider-component/theme/default.css";
-import YAML from "yaml";
-import lowerFirst from "lodash/lowerFirst";
-import isNil from "lodash/isNil";
-import { isNumber, isString } from "lodash/lang";
-import cloneDeep from "lodash/cloneDeep";
-import merge from "lodash/merge";
-import { ice_i18n } from "@/mixins/base/common-i18n";
-import { nanoid } from "nanoid";
-import find from "lodash/find";
-import isArray from "lodash/isArray";
-import isEmpty from "lodash/isEmpty";
-import isObject from "lodash/isObject";
+import YAML                                       from "yaml";
+import lowerFirst                                 from "lodash/lowerFirst";
+import isNil                                      from "lodash/isNil";
+import { isNumber, isString }                     from "lodash/lang";
+import cloneDeep                                  from "lodash/cloneDeep";
+import merge                                      from "lodash/merge";
+import { ice_i18n }                               from "@/mixins/base/common-i18n";
+import { nanoid }                                 from "nanoid";
+import find                                       from "lodash/find";
+import isArray                                    from "lodash/isArray";
+import isEmpty                                    from "lodash/isEmpty";
+import isObject                                   from "lodash/isObject";
 
 const data = [
 	"AUDIT_CONTROL",
@@ -206,9 +342,10 @@ export default {
 	},
 	data() {
 		return {
+			current_service: "",
 			baseUrl: "",
 			portSelected: null,
-
+			serviceStableVersion: "",
 			configData: {
 				services: {
 					main_app: {
@@ -243,7 +380,7 @@ export default {
 					category: "self",
 					icon: "",
 					title: {
-						"custom": ""
+						custom: "",
 					},
 				},
 			},
@@ -253,7 +390,6 @@ export default {
 			memory_min: 256,
 			// other level_config
 			volumes: [],
-
 		};
 	},
 	props: {
@@ -262,38 +398,6 @@ export default {
 			type: Number,
 			required: true,
 		},
-		/*networks STRUCTURE [
-			{
-				"driver": "host",
-				"networks": [
-					{
-						"driver": "host",
-						"id": "3014e1842267eb8aabea9e83b21ff95f36d988c519a51b107d86db9906501ba0",
-						"name": "host"
-					}
-				]
-			},
-			{
-				"driver": "bridge",
-				"networks": [
-					{
-						"driver": "bridge",
-						"id": "AAA",
-						"name": "AAA"
-					},
-					{
-						"driver": "bridge",
-						"id": "BBB",
-						"name": "BBB"
-					},
-					{
-						"driver": "bridge",
-						"id": "CCC",
-						"name": "bridge"
-					}
-				]
-			}
-		]*/
 		networks: {
 			type: Array,
 			required: true,
@@ -309,10 +413,29 @@ export default {
 			type: Object,
 			default: {
 				ports_in_use: { udp: [], tcp: [] },
-			}
+			},
 		},
 	},
 	watch: {
+		current_service: {
+			handler(val) {
+				this.$emit("updateDockerComposeServiceName", val);
+				if (this.configData.name) {
+					this.$openAPI.appManagement.appStore
+					.composeAppServiceStableTag(this.configData.name, this.current_service)
+					.then((res) => {
+						this.serviceStableVersion = res.data.data.tag;
+					})
+					.catch((e) => {
+						this.serviceStableVersion = "";
+					});
+				}else{
+					this.serviceStableVersion = "";
+				}
+				
+			},
+			immediate: true,
+		},
 		// Watch if configData changes
 		configData: {
 			handler(val, newVal) {
@@ -328,65 +451,74 @@ export default {
 			handler(val) {
 				if (val != null) {
 					this.parseComposeYaml(val);
-				} else {
-					// let gg =
-					// 	find(this.networks, (o) => {
-					// 		return o.driver == "bridge";
-					// 	}) || [];
-					// this.configData.network_mode = gg.length > 0 ? gg[0].name : "bridge";
 				}
 			},
 			immediate: true,
 		},
 		"configData.name": {
-			handler(name = '') {
+			handler(name = "") {
 				this.$emit("updateMainName", name);
 			},
 			immediate: true,
 		},
 		"errInfo.ports_in_use": {
 			handler(val) {
-				this.ports_in_use = val
+				this.ports_in_use = val;
 			},
-			immediate: true
-		}
+			immediate: true,
+		},
 	},
 	computed: {
 		firstAppName() {
-			return Object.keys(this.configData.services)[0]
+			return Object.keys(this.configData.services)[0];
 		},
 		appIcon() {
-			return this.configData["x-casaos"].icon
+			return this.configData["x-casaos"].icon;
 		},
 		appendNetworks() {
 			return this.networks.map((item) => {
-				if (item.driver == 'bridge') {
-					if (find(item.networks, ['name', this.firstAppName])) {
-						return item
+				if (item.driver == "bridge") {
+					if (find(item.networks, ["name", this.firstAppName])) {
+						return item;
 					} else {
 						return {
-							driver: 'bridge',
+							driver: "bridge",
 							networks: [
 								{
-									driver: 'bridge',
+									driver: "bridge",
 									id: nanoid(),
-									name: this.firstAppName
+									name: this.firstAppName,
 								},
-								...item.networks
-							]
-						}
+								...item.networks,
+							],
+						};
 					}
 				} else {
-					return item
+					return item;
 				}
 			});
+		},
+		markData() {
+			const data = [];
+			let markData = 256;
+			let i = 0;
+			while (markData < this.totalMemory) {
+				markData = 256 * Math.pow(2, i);
+				if (markData < this.totalMemory) {
+					data.push(markData);
+				} else {
+					data.push(this.totalMemory);
+				}
+				i++;
+			}
+			return data;
 		},
 	},
 	created() {
 		// Set Front-end base url
 		this.baseUrl = `${document.domain}`;
 		// update Service Name.
-		this.$emit('updateDockerComposeServiceName', this.firstAppName)
+		this.$emit("updateDockerComposeServiceName", this.firstAppName);
 	},
 
 	methods: {
@@ -426,6 +558,7 @@ export default {
 		 * @return {*} void
 		 */
 		changeIcon(image) {
+			// set this.configData['x-casaos'].icon
 			this.configData["x-casaos"].icon = this.getIconFromImage(image);
 		},
 
@@ -476,10 +609,9 @@ export default {
 		 * @description: Parse Import Docker Compose Commands
 		 * @return {Boolean}
 		 */
-		parseComposeYaml(val) {
+		async parseComposeYaml(val) {
 			try {
 				const yaml = YAML.parse(val);
-				console.log("传入的 yaml 文件", yaml);
 
 				// 其他配置
 				this.volumes = yaml.volumes || {};
@@ -489,6 +621,8 @@ export default {
 				this.configData.services = {};
 				// 删除掉原默认主应用。
 				this.$delete(this.configData.services, "main_app");
+				// this.current_service = yaml["x-casaos"].main;
+				this.current_service = Object.keys(yaml.services)[0];
 				// 解析 services，并将其赋值到 configData.services中。
 				for (const serviceKey in yaml.services) {
 					this.$set(this.configData.services, serviceKey, this.parseComposeItem(yaml.services[serviceKey]));
@@ -496,7 +630,6 @@ export default {
 
 				// set top level x-casaos data
 				this.configData["x-casaos"] = merge(this.configData["x-casaos"], yaml["x-casaos"]);
-
 			} catch (error) {
 				console.log(error);
 			}
@@ -555,12 +688,13 @@ export default {
 						protocol,
 					};
 				} else if (isObject(item)) {
+					item.published = item.published.toString();
 					return item;
-				 } else {
+				} else {
 					return {
 						host_ip: "",
-						target: item+"",
-						published: item+"",
+						target: item + "",
+						published: item + "",
 						protocol: "tcp",
 					};
 				}
@@ -623,13 +757,13 @@ export default {
 			if (networks) {
 				composeServicesItem.networks = isArray(networks) ? networks : Object.keys(networks);
 			} else if (network_mode == "bridge" || network_mode == undefined) {
-				composeServicesItem.network_mode = "bridge"
+				composeServicesItem.network_mode = "bridge";
 			} else if (network_mode == "host") {
-				composeServicesItem.network_mode = "host"
+				composeServicesItem.network_mode = "host";
 			} else if (network_mode == "physical") {
-				composeServicesItem.network_mode = "macvlan"
+				composeServicesItem.network_mode = "macvlan";
 			} else {
-				composeServicesItem.network_mode = network_mode
+				composeServicesItem.network_mode = network_mode;
 			}
 
 			//hostname
@@ -638,25 +772,29 @@ export default {
 			// privileged
 			// relation issue: https://github.com/IceWhaleTech/CasaOS/issues/1264
 			// if privileged is undefined or false, set it to false.
-			composeServicesItem.privileged = (composeServicesItemInput.privileged === true);
+			composeServicesItem.privileged = composeServicesItemInput.privileged === true;
 
 			//cap-add
 			if (composeServicesItemInput.cap_add != undefined) {
 				composeServicesItem.cap_add = composeServicesItemInput.cap_add;
 			} else {
-				composeServicesItem.cap_add = []
+				composeServicesItem.cap_add = [];
 			}
 			//Restart
 			if (composeServicesItemInput.restart != undefined) {
 				composeServicesItem.restart = composeServicesItemInput.restart;
 			}
-			composeServicesItem.restart = (composeServicesItem.restart === "no" || !composeServicesItem.restart) ? "unless-stopped" : composeServicesItem.restart;
+			composeServicesItem.restart =
+				composeServicesItem.restart === "no" || !composeServicesItem.restart
+					? "unless-stopped"
+					: composeServicesItem.restart;
 
 			// command
-			composeServicesItem.command = this.makeArray(composeServicesItemInput.command)
+			composeServicesItem.command = this.makeArray(composeServicesItemInput.command);
 
 			// container_name
-			composeServicesItem.container_name = composeServicesItemInput?.container_name || ""
+			composeServicesItem.container_name = composeServicesItemInput?.container_name || "";
+			composeServicesItem.hostname = composeServicesItemInput?.container_name || "";
 			// this.$set(composeServicesItem, "container_name", composeServicesItemInput?.container_name);
 
 			if (
@@ -671,7 +809,7 @@ export default {
 
 			// 判断是否存在
 			const memory = composeServicesItemInput?.deploy?.resources?.limits?.memory;
-			let newMemory = 0
+			let newMemory = 0;
 			if (memory) {
 				// 存在的情况下，检测是否有单位
 				// 检测没有单位的情况
@@ -683,7 +821,9 @@ export default {
 					newMemory = memory.replace(/[Gg]/, "") * 1024;
 				}
 			}
-			let ob = merge(composeServicesItemInput?.deploy, { resources: { limits: { memory: newMemory || this.totalMemory } } })
+			let ob = merge(composeServicesItemInput?.deploy, {
+				resources: { limits: { memory: newMemory || this.totalMemory } },
+			});
 			this.$set(composeServicesItem, "deploy", ob);
 
 			return composeServicesItem;
@@ -757,26 +897,30 @@ export default {
 				let outputService = ConfigData.services[servicesKey];
 				// memory
 				outputService.deploy.resources.limits.memory = service.deploy.resources.limits.memory + "M";
-				outputService.devices = service.devices.filter(device => {
-					if (device.container || device.host) {
-						return true
-					}
-					return false
-				}).map((device) => {
-					return `${device.host}:${device.container}`;
-				});
-				outputService.environment = service.environment.filter(env => {
-					if (env.container || env.host) {
-						return true
-					}
-					return false
-				}).map((env) => {
-					return `${env.container}=${env.host}`;
-				});
+				outputService.devices = service.devices
+					.filter((device) => {
+						if (device.container || device.host) {
+							return true;
+						}
+						return false;
+					})
+					.map((device) => {
+						return `${device.host}:${device.container}`;
+					});
+				outputService.environment = service.environment
+					.filter((env) => {
+						if (env.container || env.host) {
+							return true;
+						}
+						return false;
+					})
+					.map((env) => {
+						return `${env.container}=${env.host}`;
+					});
 			}
 			if (this.dockerComposeCommands) {
 				let yaml = YAML.parse(this.dockerComposeCommands);
-				Object.keys(yaml.services).forEach(key => {
+				Object.keys(yaml.services).forEach((key) => {
 					yaml.services[key].ports = [];
 					yaml.services[key].volumes = [];
 					yaml.services[key].devices = [];
@@ -786,21 +930,14 @@ export default {
 					delete yaml.services[key]?.networks;
 				});
 
-				ConfigData = merge(yaml, ConfigData)
+				ConfigData = merge(yaml, ConfigData);
 			}
-
-			// check
-			// let DockerComposeCommands = YAML.stringify(ConfigData)
-			// this.$api.apps.checkPort().then(res => {
-			// 	this.ports_in_use = res.data?.data || {}
-			// })
-
 			this.$emit("updateDockerComposeCommands", YAML.stringify(ConfigData));
 		},
 
 		showPorts(service) {
 			if (service.networks) {
-				return true
+				return true;
 			}
 			if (!service?.network_mode) {
 				return true;
@@ -827,39 +964,28 @@ export default {
 			}
 		},
 		bridgePorts(services) {
-			/*
-			 - "3000"
-			 - "3000-3005"
-			 - "127.0.0.1:8001"
-			 - "127.0.0.1:5000-5010"
-			 */
-
-			let published,
-				result = [];
-			for (let key in services) {
-				let service = services[key]
-				service.ports.map(function (item) {
-					// TODO 需要健壮一下
+			let result = [];
+			for (const key in services) {
+				const service = services[key];
+				service.ports.forEach((item) => {
 					if (isNumber(item)) {
-						result.push(item);
-						return;
-					}
-					const TEMPORARY_PORT_INFORMATION = item.published?.split(":");
-					if (TEMPORARY_PORT_INFORMATION.length > 1) {
-						published = TEMPORARY_PORT_INFORMATION[1];
+						result.push(`${item}`);
 					} else {
-						published = TEMPORARY_PORT_INFORMATION[0];
-					}
-					published = published?.split("-");
-
-					if (published.length > 1) {
-						let start = published[0];
-						let end = published[1];
-						for (let i = start; i <= end; i++) {
-							result.push(i);
+						const TEMPORARY_PORT_INFORMATION = item.published?.split(":");
+						const published =
+							TEMPORARY_PORT_INFORMATION?.length > 1
+								? TEMPORARY_PORT_INFORMATION[1]
+								: TEMPORARY_PORT_INFORMATION[0];
+						const publishedRange = published?.split("-");
+						if (publishedRange?.length > 1) {
+							const start = parseInt(publishedRange[0]);
+							const end = parseInt(publishedRange[1]);
+							for (let i = start; i <= end; i++) {
+								result.push(`${i}`);
+							}
+						} else {
+							result.push(`${parseInt(publishedRange[0])}`);
 						}
-					} else {
-						result.push(published[0]);
 					}
 				});
 			}
@@ -873,33 +999,35 @@ export default {
 		},
 		// networks or network_mode
 		patchNetworkValue(value, service) {
-			if (value === 'host' || value === 'bridge') {
-				this.$delete(service, 'networks')
-				this.$set(service, 'network_mode', value)
+			if (value === "host" || value === "bridge") {
+				this.$delete(service, "networks");
+				this.$set(service, "network_mode", value);
 			} else {
-				this.$delete(service, 'network_mode')
-				this.$set(service, 'networks', [value])
-				const tempNetworks = merge(this.configData?.networks || {}, { [value]: { name: value } })
-				this.$set(this.configData, 'networks', tempNetworks);
+				this.$delete(service, "network_mode");
+				this.$set(service, "networks", [value]);
+				const tempNetworks = merge(this.configData?.networks || {}, { [value]: { name: value } });
+				this.$set(this.configData, "networks", tempNetworks);
 			}
-		}
+		},
 
+		getFirstField(image) {
+			return image?.split(":")[0];
+		},
+
+		getLateField(image) {
+			return image?.split(":")[1];
+		},
 	},
 	filters: {
 		duplexDisplay(val) {
 			if (!val) {
-				return 256//this.memory_min
+				return 256; //this.memory_min
 			}
 			return (isNumber(val) && val) || (val && val.replace(/[Mm]/, ""));
 		},
 	},
 };
 </script>
-<style lang="scss">
-.app-card .modal-card-head.setting-compose-panel {
-	background-color: hsla(208, 16%, 94%, 1);
-}
-</style>
 <style lang="scss" scoped>
 .b-tabs {
 	margin-bottom: 0;
@@ -934,5 +1062,22 @@ export default {
 			height: 2.5rem;
 		}
 	}
+}
+
+::v-deep .vue-slider-mark-step {
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	-webkit-box-shadow: 0 0 0 2px #ccc;
+	box-shadow: 0 0 0 2px #ccc;
+	background-color: #fff;
+}
+
+::v-deep .vue-slider-mark-label {
+	font-size: 0.75rem;
+}
+
+::v-deep .vue-slider-dot-tooltip-text {
+	font-size: 0.75rem;
 }
 </style>

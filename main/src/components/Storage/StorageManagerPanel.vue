@@ -14,8 +14,8 @@
 			<section class="modal-card-body" style="overflow-y:hidden">
 				<!-- Storage and Disk List Start -->
 				<div v-if="!creatIsShow" class="is-flex-grow-1 is-flex-shrink-1 is-relative">
-					<div v-if="activeTab == 0" class="create-container" style="overflow-y:hidden">
-						<popper :options="{ placement: 'bottom', modifiers: { offset: { offset: '0,4px' } } }"
+					<div v-if="activeTab == 0" class="create-container" >
+						<popper :options="{ placement: 'bottom',  }"
 							append-to-body trigger="hover">
 							<div v-show="unDiskData.length == 0" class="popper  tooltip-content dark">
 								{{ $t('Please insert a Drive to Create Storage') }}
@@ -341,7 +341,7 @@ export default {
 					})
 				})
 
-				this.storageData = storageArraySort.map((storage) => {
+				const remapStorage = (storage) => {
 					return {
 						uuid: storage.uuid,
 						name: storage.label,
@@ -355,22 +355,9 @@ export default {
 						mount_point: storage.mount_point,
 						disk: storage.disk
 					}
-				})
-				this.mergeConbinationsStorageData = mergeConbinationsSort.map((storage) => {
-					return {
-						uuid: storage.uuid,
-						name: storage.label,
-						isSystem: storage.diskName == "System",
-						fsType: storage.type,
-						size: storage.size,
-						availSize: storage.avail,
-						usePercent: 100 - Math.floor(storage.avail * 100 / storage.size),
-						diskName: storage.drive_name,
-						path: storage.path,
-						mount_point: storage.mount_point,
-						disk: storage.disk
-					}
-				})
+				}
+				this.storageData = storageArraySort.map(remapStorage);
+				this.mergeConbinationsStorageData = mergeConbinationsSort.map(remapStorage);
 
 				let diskNumArray = this.storageData.map(storage => {
 					if (storage.name.includes("Storage")) {
